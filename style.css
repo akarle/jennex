@@ -1,8 +1,66 @@
 /* https://www.swyx.io/css-100-bytes */
 html {
-  max-width: 70ch;
-  padding: 3em 1em;
-  margin: auto;
-  line-height: 1.75;
-  font-size: 1.25em;
+    max-width: 70ch;
+    padding: 3em 1em;
+    margin: auto;
+    line-height: 1.75;
+    font-size: 1.25em;
+    font-family: serif;
+    background-color: #fffff5;
+}
+
+.index-joinus {   
+    text-align: center;
+}
+
+.index-title {
+    text-align: center;
+    font-size: 2em;
+}
+
+.index-date {
+    text-align: center;
+    font-size: 1.4em;
+}
+
+.index-daystill {
+    text-align: center;
+    font-size: .8em;
+}
+
+nav {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+
+nav a {
+    text-align: center;
+    text-decoration: none;
+    color: black;
+    padding: 2%;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+p.address {
+    padding-left: 36px;
+}
+
+p.event-time {
+        margin-top: 20px;
+	margin-bottom: 20px;
+}
+
+div.event-schedule {
+    display: flex;
+    justify-content: space-between;
+}
+
+div.event-schedule h3 {
+    display: inline;
+    margin-top: 20px;
+    margin-bottom: 20px;
 }
