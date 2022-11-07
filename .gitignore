@@ -1,0 +1,3 @@
+*.html
+!footer.html
+!header.html

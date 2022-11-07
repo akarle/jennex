@@ -1,0 +1,22 @@
+<img src="/static/acadia.jpg" alt="Alex and Jennie in Acadia" width="100%">
+
+<p class="index-joinus">
+  Please join us for our wedding celebration on
+</p>
+<p class="index-date">
+  September 9, 2023
+</p>
+<p class="index-daystill">
+  <span id="daystill"></span>
+</p>
+<script>
+const now = new Date();
+const bigday = new Date("2023-09-09");
+const daysUntil = parseInt((bigday.getTime() - now.getTime()) / 1000 / 3600 / 24) + 1;
+if (daysUntil != 1) {
+    document.getElementById("daystill").innerHTML = daysUntil + " days";
+} else {
+    document.getElementById("daystill").innerHTML = daysUntil + " day";
+}
+document.getElementById("daystill").innerHTML += " until the big day!";
+</script>
