@@ -3,7 +3,11 @@
   spiffy
   uri-common
   intarweb
-  sxml-serializer)
+  sxml-serializer
+  sql-null
+  (chicken string))
+
+(load "db.scm")
 
 (define routes
   ;; See uri-match for format: http://wiki.call-cc.org/eggref/5/uri-match#routes-format
@@ -51,6 +55,47 @@
           (button "Lookup"))
         (p "Please let us know by DATE whether you can make it!")))))
 
+(define (guest-to-form g)
+  ;; Given a guest record, generate a SXML form for their settings
+  ;; TODO: expand plus-1's
+  (define (get-going-attrs val)
+    `((name ,(conc (number->string (guest-id g)) "__going"))
+      (value ,val)
+      (type "radio")
+      (required "true")
+      ,@(let ((going (guest-going g)))
+	 (cond ((equal? val "no") (if (eq? going 0) '((checked)) '()))
+	       ((equal? val "yes") (if (eq? going 1) '((checked)) '()))
+	       ((equal? val "null") (if (sql-null? going) '((checked)) '()))
+	       (else (error "Bad val"))))))
+
+  (define (get-meal-attrs val)
+    `((name ,(conc (number->string (guest-id g)) "__meal_choice"))
+      (value ,val)
+      (type "radio")
+      (required "true")
+      ,@(if (equal? (guest-meal-choice g) val)
+	      '((checked))
+	      '())))
+
+  ;; TODO: add notes section for allergies, etc
+  `((div (@ (class "guest"))
+	 (h4 ,(guest-name g))
+	 (fieldset
+	  (legend "Will You be Attending?")
+	  (label (input (@ ,@(get-going-attrs "yes"))) "Yes!")
+	  (br)
+	  (label (input (@ ,@(get-going-attrs "no"))) "No :(")
+	  (br)
+	  (label (input (@ ,@(get-going-attrs "null"))) "Not Sure Yet..."))
+	 (fieldset
+	  (legend "Meal Choice")
+	  (label (input (@ ,@(get-meal-attrs "chicken"))) "Chicken")
+	  (br)
+	  (label (input (@ ,@(get-meal-attrs "beef"))) "Beef")
+	  (br)
+	  (label (input (@ ,@(get-meal-attrs "vegetarian"))) "Chicken")))))
+
 (define (route-get-rsvp c)
   ;; TODO: consider a POST instead of GET to prevent people from sharing
   ;; their edit links?
@@ -58,16 +103,26 @@
          (name (alist-ref 'rsvp-name q)))
     (send-sxml
       (template-page
-        ;; TODO: look up name in database!
-        (if name
+       (let ((guests (get-party-by-name name)))
+	 (if (not (null? guests))
           `((h2 "RSVP")
             (p "Great news! You're invited :) We can't wait to celebrate with you!")
             (p "We've found the following guests under your name. For each, please "
-               "select whether you'll make it and your choice of meal."))
+               "select whether you'll make it and your choice of meal.")
+	    (form (@ (action "/rsvp") (method "POST"))
+		  ,@(map guest-to-form guests)
+		  (button "Save")))
           `((h2 "RSVP")
             (p "Sorry! We can't find anyone under the name '" ,name
                "'. Please double check the spelling and if it looks like a "
                "mistake on our end email us at "
-               (a (@ (href "mailto:rsvp@jennex.org")) "rsvp@jennex.org") ".")))))))
+               (a (@ (href "mailto:rsvp@jennex.org")) "rsvp@jennex.org") "."))))))))
 
-(define (route-post-rsvp c) (send-response status: 'ok body: "hello!"))
+(define (route-post-rsvp c)
+  (let ((fdata (read-urlencoded-request-data (current-request))))
+    (send-sxml
+     (template-page
+      `((h2 "RSVP")
+	(p "Success! Thanks for RSVP-ing.")
+	(p (a (@ (href "/rsvp")) "Edit your response"))
+	(p (a (@ (href "https://jennex.org")) "Read more about the event")))))))
