@@ -5,9 +5,12 @@
   intarweb
   sxml-serializer
   sql-null
-  (chicken string))
+  (chicken string)
+  (chicken condition))
 
 (load "db.scm")
+
+(define email '(a (@ (href "mailto:rsvp@jennex.org")) "rsvp@jennex.org"))
 
 (define routes
   ;; See uri-match for format: http://wiki.call-cc.org/eggref/5/uri-match#routes-format
@@ -55,46 +58,35 @@
           (button "Lookup"))
         (p "Please let us know by DATE whether you can make it!")))))
 
+(define key-to-getter
+  `(("going" . ,guest-going)
+    ("meal-choice" . ,guest-meal-choice)))
+
 (define (guest-to-form g)
-  ;; Given a guest record, generate a SXML form for their settings
-  ;; TODO: expand plus-1's
-  (define (get-going-attrs val)
-    `((name ,(conc (number->string (guest-id g)) "__going"))
+  (define (get-attrs key val)
+    `((name ,(conc (number->string (guest-id g)) "__" key))
       (value ,val)
       (type "radio")
       (required "true")
-      ,@(let ((going (guest-going g)))
-	 (cond ((equal? val "no") (if (eq? going 0) '((checked)) '()))
-	       ((equal? val "yes") (if (eq? going 1) '((checked)) '()))
-	       ((equal? val "null") (if (sql-null? going) '((checked)) '()))
-	       (else (error "Bad val"))))))
-
-  (define (get-meal-attrs val)
-    `((name ,(conc (number->string (guest-id g)) "__meal_choice"))
-      (value ,val)
-      (type "radio")
-      (required "true")
-      ,@(if (equal? (guest-meal-choice g) val)
+      ,@(let ((getter (assoc key key-to-getter)))
+          (if (and getter (equal? ((cdr getter) g) val))
 	      '((checked))
-	      '())))
-
+	      '()))))
   ;; TODO: add notes section for allergies, etc
   `((div (@ (class "guest"))
 	 (h4 ,(guest-name g))
 	 (fieldset
 	  (legend "Will You be Attending?")
-	  (label (input (@ ,@(get-going-attrs "yes"))) "Yes!")
+	  (label (input (@ ,@(get-attrs "going" 1))) "Yes!")
 	  (br)
-	  (label (input (@ ,@(get-going-attrs "no"))) "No :(")
-	  (br)
-	  (label (input (@ ,@(get-going-attrs "null"))) "Not Sure Yet..."))
+	  (label (input (@ ,@(get-attrs "going" 0))) "No :("))
 	 (fieldset
 	  (legend "Meal Choice")
-	  (label (input (@ ,@(get-meal-attrs "chicken"))) "Chicken")
+	  (label (input (@ ,@(get-attrs "meal-choice" "chicken"))) "Chicken")
 	  (br)
-	  (label (input (@ ,@(get-meal-attrs "beef"))) "Beef")
+	  (label (input (@ ,@(get-attrs "meal-choice" "beef"))) "Beef")
 	  (br)
-	  (label (input (@ ,@(get-meal-attrs "vegetarian"))) "Chicken")))))
+	  (label (input (@ ,@(get-attrs "meal-choice" "vegetarian"))) "Vegetarian")))))
 
 (define (route-get-rsvp c)
   ;; TODO: consider a POST instead of GET to prevent people from sharing
@@ -115,14 +107,57 @@
           `((h2 "RSVP")
             (p "Sorry! We can't find anyone under the name '" ,name
                "'. Please double check the spelling and if it looks like a "
-               "mistake on our end email us at "
-               (a (@ (href "mailto:rsvp@jennex.org")) "rsvp@jennex.org") "."))))))))
+               "mistake on our end email us at " ,email))))))))
+
+
+(define key-to-setter
+  ;; Just an a-list of input names -> guest-setter functions
+  ;; (allowing the request to specify any string is dangerous)
+  `((going . ,guest-going-set!)
+    (meal-choice . ,guest-meal-choice-set!)
+    (plus1-going . ,guest-plus1-going-set!)
+    (plus1-meal-choice . ,guest-plus1-meal-choice-set!)))
 
 (define (route-post-rsvp c)
-  (let ((fdata (read-urlencoded-request-data (current-request))))
-    (send-sxml
-     (template-page
-      `((h2 "RSVP")
-	(p "Success! Thanks for RSVP-ing.")
-	(p (a (@ (href "/rsvp")) "Edit your response"))
-	(p (a (@ (href "https://jennex.org")) "Read more about the event")))))))
+  (call/cc
+   (lambda (c)
+     (with-exception-handler
+      (lambda (exn)
+        (print-error-message exn)
+	(send-sxml
+	 (template-page
+	  `((h2 "RSVP")
+	    ;; TODO: log it better...
+	    (p "There was an error saving your response please try again "
+	       "and if it continues to fail, reach out to us at " ,email))))
+	(c #f))
+      (lambda ()
+	;; The data is in pairs of (ID__key . val), so the first thing to do
+	;; is to walk through that data and build up a view of each guest
+	(let loop ((guests '()) (fdata (read-urlencoded-request-data (current-request))))
+	  (if (null? fdata) ;; Done parsing all our form data
+	      (begin
+                ;; This will raise if update-guest fails (so we get an error page)
+                (for-each print (map update-guest (map cdr guests)))
+		(send-sxml
+		 (template-page
+		  `((h2 "RSVP")
+		    (p "Success! Thanks for RSVP-ing.")
+		    (p (a (@ (href "/")) "Edit your response"))
+		    (p (a (@ (href "https://jennex.org")) "Read more about the event"))))))
+	      (let* ((input (car fdata))
+		     (name (car input))
+		     (value (cdr input))
+		     (split (string-split (symbol->string name) "__"))
+		     (id (string->number (car split)))
+		     (cached-guest (assoc id guests))
+		     (key (string->symbol (cadr split)))
+		     (setter! (cdr (assoc key key-to-setter))))
+		(if cached-guest
+		    (begin
+                      (print "setting to " value)
+		      (setter! (cdr cached-guest) value)
+		      (loop guests (cdr fdata)))
+		    (let ((guest (get-guest-by-id id)))
+		      (setter! guest value)
+		      (loop (cons (cons id guest) guests) (cdr fdata))))))))))))

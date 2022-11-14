@@ -9,6 +9,14 @@
   id name party-id going meal-choice
   has-plus1 plus1-going plus1-meal-choice)
 
+(set-record-printer! guest
+  (lambda (x o)
+    (fprintf o "(id: ~A name: ~A going: ~A meal: ~A)"
+             (guest-id x)
+             (guest-name x)
+             (guest-going x)
+             (guest-meal-choice x))))
+
 (define (get-guest-by-name name)
   (apply make-guest
 	 (first-row conn
@@ -22,6 +30,20 @@
   plus1_going,
   plus1_meal_choice
 FROM guests WHERE name = $name" name)))
+
+(define (get-guest-by-id id)
+  (apply make-guest
+	 (first-row conn
+"SELECT
+  id,
+  name,
+  party_id,
+  going,
+  meal_choice,
+  has_plus1,
+  plus1_going,
+  plus1_meal_choice
+FROM guests WHERE id = $name" id)))
 
 (define (get-guests-in-party pid)
   (map-row make-guest conn
@@ -44,7 +66,7 @@ FROM guests WHERE party_id = $pid" pid))
   (call/cc
    (lambda (c)
      (with-exception-handler
-      (lambda (x) (c '()))
+      (lambda (x) (print-error-message exn) (c '()))
       (lambda ()
 	(let* ((guest (get-guest-by-name name))
 	       (party-id (guest-party-id guest)))
@@ -53,22 +75,15 @@ FROM guests WHERE party_id = $pid" pid))
 	      (list guest))))))))
 
 (define (update-guest g)
-  (call/cc
-   (lambda (c)
-     (with-exception-handler
-      (lambda (x) (print x) (c #f))
-      (lambda ()
-	(update conn "
-UPDATE guests SET
- name = $1,
- going = $2,
- meal_choice = $3,
- plus1_going = $4,
- plus1_meal_choice = $5
-WHERE id = $6"
-	  (guest-name g)
-	  (guest-going g)
-	  (guest-meal-choice g)
-	  (guest-plus1-going g)
-	  (guest-plus1-meal-choice g)
-	  (guest-id g)))))))
+  (update conn "
+          UPDATE guests SET
+          going = $2,
+          meal_choice = $3,
+          plus1_going = $4,
+          plus1_meal_choice = $5
+          WHERE id = $6"
+          (guest-going g)
+          (guest-meal-choice g)
+          (guest-plus1-going g)
+          (guest-plus1-meal-choice g)
+          (guest-id g)))
