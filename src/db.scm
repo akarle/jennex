@@ -66,7 +66,7 @@ FROM guests WHERE party_id = $pid" pid))
   (call/cc
    (lambda (c)
      (with-exception-handler
-      (lambda (x) (print-error-message exn) (c '()))
+      (lambda (exn) (print-error-message exn) (c '()))
       (lambda ()
 	(let* ((guest (get-guest-by-name name))
 	       (party-id (guest-party-id guest)))
