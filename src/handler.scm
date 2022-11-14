@@ -139,12 +139,15 @@
 	      (begin
                 ;; This will raise if update-guest fails (so we get an error page)
                 (map update-guest (map cdr guests))
-		(send-sxml
-		 (template-page
-		  `((h2 "RSVP")
-		    (p "Success! Thanks for RSVP-ing.")
-		    (p (a (@ (href "/")) "Edit your response"))
-		    (p (a (@ (href "https://jennex.org")) "Read more about the event"))))))
+                (let* ((first-guest (cdadr guests))
+                       (first-name (guest-name first-guest))
+                       (edit-link (conc "/rsvp?rsvp-name=" (uri-encode-string first-name))))
+                  (send-sxml
+                    (template-page
+                      `((h2 "RSVP")
+                        (p "Success! Thanks for RSVP-ing.")
+                        (p (a (@ (href ,edit-link))) "Edit your response")
+                        (p (a (@ (href "https://jennex.org")) "Read more about the event")))))))
 	      (let* ((input (car fdata))
 		     (name (car input))
 		     (value (cdr input))
