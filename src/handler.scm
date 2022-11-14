@@ -138,7 +138,7 @@
 	  (if (null? fdata) ;; Done parsing all our form data
 	      (begin
                 ;; This will raise if update-guest fails (so we get an error page)
-                (for-each print (map update-guest (map cdr guests)))
+                (map update-guest (map cdr guests))
 		(send-sxml
 		 (template-page
 		  `((h2 "RSVP")
@@ -155,7 +155,6 @@
 		     (setter! (cdr (assoc key key-to-setter))))
 		(if cached-guest
 		    (begin
-                      (print "setting to " value)
 		      (setter! (cdr cached-guest) value)
 		      (loop guests (cdr fdata)))
 		    (let ((guest (get-guest-by-id id)))

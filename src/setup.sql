@@ -1,6 +1,7 @@
 -- Parties just group a series of guests so they can RSVP for eachother
 CREATE TABLE parties (
-  id INTEGER PRIMARY KEY AUTOINCREMENT
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  notes TEXT
 );
   
 -- Guests store individual preferences for meals, etc
