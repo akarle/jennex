@@ -126,7 +126,7 @@
                                  "Anything else we should know? (Allergies, kids, ...)")
                           (textarea (@ (class "party-notes")
                                        (name ,(conc (party-id party) "__notes"))
-                                       (rows 10))
+                                       (rows 5))
                                     ,(let ((notes (party-notes party)))
                                        (if (sql-null? notes)
                                          ""

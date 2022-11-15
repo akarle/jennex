@@ -112,3 +112,12 @@ label.meal-choice {
   margin-top: 20px;
   margin-bottom: 16px;
 }
+
+input {
+  /* TODO: why is 1.25 so big here but not in <p> tags? */
+  font-size: .9em;
+}
+
+textarea {
+  font-size: 1.2em;
+}
