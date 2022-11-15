@@ -53,10 +53,9 @@
       '((h2 "RSVP")
         (p "Thanks for RSVP'ing! To start, please lookup the "
            "name on your invitation.")
-        (form (@ (action "/rsvp"))
-          (label "Name:"
-                 (input (@ (name "rsvp-name"))))
-          (button "Lookup"))
+        (form (@ (class "find-invite") (action "/rsvp"))
+              (input (@ (class "find-invite") (name "rsvp-name")))
+              (button (@ (class "find-invite")) "Find Invitation"))
         (p "Please let us know by DATE whether you can make it!")))))
 
 (define (guest-to-form g)
@@ -92,6 +91,7 @@
                           (option (@ ,@(get-meal-attrs "vegan")) "Vegan")))))))
 
 (define (route-get-rsvp c)
+  ;; TODO: strip trailing spaces in names? (here and on save)
   (call/cc
     (lambda (c)
       (with-exception-handler

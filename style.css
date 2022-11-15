@@ -121,3 +121,21 @@ input {
 textarea {
   font-size: 1.2em;
 }
+
+button.find-invite {
+  font-size: 1.0em;
+  padding: 8px 8px;
+  color: #FFFFFF;
+  background-color: #198754;
+  border-color: #198754;
+  border-radius: 8px;
+  box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
+}
+
+input.find-invite {
+  line-height: 2em;
+}
+
+form.find-invite {
+  text-align: center;
+}
