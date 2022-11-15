@@ -64,8 +64,10 @@
     ("meal-choice" . ,guest-meal-choice)))
 
 (define (guest-to-form g)
+  (define (input-name key)
+    `(name ,(conc (number->string (guest-id g)) "__" key)))
   (define (get-attrs key val)
-    `((name ,(conc (number->string (guest-id g)) "__" key))
+    `(,(input-name key)
       (value ,val)
       (type "radio")
       (required "true")
@@ -76,6 +78,8 @@
   ;; TODO: add notes section for allergies, etc
   `((div (@ (class "guest"))
 	 (h4 ,(guest-name g))
+         (label "Name: "
+                (input (@ ,(input-name "name") (required "true") (value ,(guest-name g)))))
 	 (fieldset
 	  (legend "Will You be Attending?")
 	  (label (input (@ ,@(get-attrs "going" 1))) "Yes!")
