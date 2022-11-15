@@ -39,6 +39,7 @@
        (nav 
          (a (@ (href "https://jennex.org")) "Home")
          (a (@ (href "https://jennex.org/story.html")) "Our Story")
+         (a (@ (href "/")) "RSVP")
          (a (@ (href "https://jennex.org/event.html")) "Event")
          (a (@ (href "https://jennex.org/travel.html")) "Travel")
          (a (@ (href "https://jennex.org/registry.html")) "Registry"))
@@ -68,8 +69,8 @@
       (value ,val)
       (type "radio")
       (required "true")
-      ,@(let ((getter (assoc key key-to-getter)))
-          (if (and getter (equal? ((cdr getter) g) val))
+      ,@(let ((getter (alist-ref key key-to-getter equal?)))
+          (if (and getter (equal? (getter g) val))
 	      '((checked))
 	      '()))))
   ;; TODO: add notes section for allergies, etc
@@ -89,34 +90,51 @@
 	  (label (input (@ ,@(get-attrs "meal-choice" "vegetarian"))) "Vegetarian")))))
 
 (define (route-get-rsvp c)
-  ;; TODO: consider a POST instead of GET to prevent people from sharing
-  ;; their edit links?
-  (let* ((q (uri-query (request-uri (current-request))))
-         (name (alist-ref 'rsvp-name q)))
-    (send-sxml
-      (template-page
-       (let ((guests (get-party-by-name name)))
-	 (if (not (null? guests))
-          `((h2 "RSVP")
-            (p "Great news! You're invited :) We can't wait to celebrate with you!")
-            (p "We've found the following guests under your name. For each, please "
-               "select whether you'll make it and your choice of meal.")
-	    (form (@ (action "/rsvp") (method "POST"))
-		  ,@(map guest-to-form guests)
-		  (button "Save")))
-          `((h2 "RSVP")
-            (p "Sorry! We can't find anyone under the name '" ,name
-               "'. Please double check the spelling and if it looks like a "
-               "mistake on our end email us at " ,email))))))))
-
+  (call/cc
+    (lambda (c)
+      (with-exception-handler
+        (lambda (exn)
+          (print-error-message exn)
+          (print-call-chain)
+          (send-sxml
+            (template-page
+              `((h2 "RSVP")
+                (p "Sorry! We can't find anyone under that name. "
+                   "Please double check the spelling and if it looks like a "
+                   "mistake on our end email us at " ,email)
+                (p (a (@ (href "/")) "Back")))))
+          (c #f))
+        (lambda ()
+          ;; TODO: consider a POST instead of GET to prevent people from sharing
+          ;; their edit links?
+          (let* ((q (uri-query (request-uri (current-request))))
+                 (name (alist-ref 'rsvp-name q)))
+            (send-sxml
+              (template-page
+                (let ((party (get-party-by-name name)))
+                  `((h2 "RSVP")
+                    (p "Great news! You're invited :) We can't wait to celebrate with you!")
+                    (p "We've found the following guests under your name. For each, please "
+                       "select whether you'll make it and your choice of meal.")
+                    (form (@ (action "/rsvp") (method "POST"))
+                          ,@(map guest-to-form (party-guests party))
+                          (h4 "Additional Information")
+                          (label (@ (for "notes")) "Anything else we should know? (Allergies, kids, ...)")
+                          (textarea (@ (class "party-notes")
+                                       (name ,(conc (party-id party) "__notes"))
+                                       (rows 10))
+                                    ,(let ((notes (party-notes party)))
+                                       (if (sql-null? notes)
+                                         ""
+                                         notes)))
+                          (button (@ (class "party-update")) "Save"))))))))))))
 
 (define key-to-setter
   ;; Just an a-list of input names -> guest-setter functions
   ;; (allowing the request to specify any string is dangerous)
-  `((going . ,guest-going-set!)
-    (meal-choice . ,guest-meal-choice-set!)
-    (plus1-going . ,guest-plus1-going-set!)
-    (plus1-meal-choice . ,guest-plus1-meal-choice-set!)))
+  `(("going" . ,guest-going-set!)
+    ("meal-choice" . ,guest-meal-choice-set!)
+    ("name" . ,guest-name-set!)))
 
 (define (route-post-rsvp c)
   (call/cc
@@ -124,6 +142,7 @@
      (with-exception-handler
       (lambda (exn)
         (print-error-message exn)
+        (print-call-chain)
 	(send-sxml
 	 (template-page
 	  `((h2 "RSVP")
@@ -134,7 +153,9 @@
       (lambda ()
 	;; The data is in pairs of (ID__key . val), so the first thing to do
 	;; is to walk through that data and build up a view of each guest
-	(let loop ((guests '()) (fdata (read-urlencoded-request-data (current-request))))
+	(let loop ((guests '())
+                   (fdata (read-urlencoded-request-data (current-request)))
+                   (notes ""))
 	  (if (null? fdata) ;; Done parsing all our form data
 	      (begin
                 ;; This will raise if update-guest fails (so we get an error page)
@@ -142,6 +163,7 @@
                 (let* ((first-guest (cdadr guests))
                        (first-name (guest-name first-guest))
                        (edit-link (conc "/rsvp?rsvp-name=" (uri-encode-string first-name))))
+                  (update-party-notes (guest-party-id first-guest) notes)
                   (send-sxml
                     (template-page
                       `((h2 "RSVP")
@@ -153,13 +175,16 @@
 		     (value (cdr input))
 		     (split (string-split (symbol->string name) "__"))
 		     (id (string->number (car split)))
-		     (cached-guest (assoc id guests))
-		     (key (string->symbol (cadr split)))
-		     (setter! (cdr (assoc key key-to-setter))))
-		(if cached-guest
-		    (begin
-		      (setter! (cdr cached-guest) value)
-		      (loop guests (cdr fdata)))
-		    (let ((guest (get-guest-by-id id)))
-		      (setter! guest value)
-		      (loop (cons (cons id guest) guests) (cdr fdata))))))))))))
+		     (cached-guest (alist-ref id guests))
+		     (key (cadr split))
+		     (setter! (alist-ref key key-to-setter equal?)))
+                ;; special case notes since it updates the party
+                (if (equal? key "notes")
+                  (loop guests (cdr fdata) value)
+                  (if cached-guest
+                    (begin
+                      (setter! cached-guest value)
+                      (loop guests (cdr fdata) notes))
+                    (let ((guest (get-guest-by-id id)))
+                      (setter! guest value)
+                      (loop (cons (cons id guest) guests) (cdr fdata) notes))))))))))))

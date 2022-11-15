@@ -15,7 +15,7 @@
 
 ;; Spiffy recommends using vhost-map to assign dynamic routes
 ;; (even if we aren't using the vhost portion of it)
-(vhost-map `(("localhost" . ,(uri-match/spiffy routes))))
+(vhost-map `((".*" . ,(uri-match/spiffy routes))))
 
 (define (main args)
   (print (format "Starting up! Listening on port ~A..." (server-port)))
