@@ -55,7 +55,7 @@ FROM guests WHERE id = $name" id)))
 FROM guests WHERE party_id = $pid" pid))
 
 (define (get-party-by-id pid)
-  (let ((res (first-row conn "SELECT id, notes FROM  parties")))
+  (let ((res (first-row conn "SELECT id, notes FROM parties WHERE id = $pid" pid)))
     (make-party (car res) (cadr res) '())))
 
 (define (get-party-by-name name)
