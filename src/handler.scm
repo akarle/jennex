@@ -77,7 +77,7 @@
            (legend ,(guest-name g))
            (label (strong "Name: ")
                   (input (@ ,(input-name "name") (required "true") (value ,(guest-name g)))))
-           (p (strong "Will You be Attending?" (sup (@ (class "required")) "*")))
+           (p (strong "Will You be Attending?"))
            (label (input (@ ,@(get-going-attrs 1))) "Yes!")
            (br)
            (label (input (@ ,@(get-going-attrs 0))) "No :(")
