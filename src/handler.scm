@@ -59,38 +59,37 @@
           (button "Lookup"))
         (p "Please let us know by DATE whether you can make it!")))))
 
-(define key-to-getter
-  `(("going" . ,guest-going)
-    ("meal-choice" . ,guest-meal-choice)))
-
 (define (guest-to-form g)
   (define (input-name key)
     `(name ,(conc (number->string (guest-id g)) "__" key)))
-  (define (get-attrs key val)
-    `(,(input-name key)
+  (define (get-going-attrs val)
+    `(,(input-name "going")
        (value ,val)
        (type "radio")
        (required "true")
-       ,@(let ((getter (alist-ref key key-to-getter equal?)))
-           (if (and getter (equal? (getter g) val))
-             '((checked))
-             '()))))
+       ,@(if (equal? (guest-going g) val) '((checked)) '())))
+  (define (get-meal-attrs val)
+    `((value ,val)
+      ,@(if (equal? (guest-meal-choice g) val) '((selected)) '())))
   ;; TODO: add notes section for allergies, etc
   `((div (@ (class "guest"))
          (fieldset
            (legend ,(guest-name g))
            (label (strong "Name: ")
                   (input (@ ,(input-name "name") (required "true") (value ,(guest-name g)))))
-           (p (strong "Will You be Attending?"))
-           (label (input (@ ,@(get-attrs "going" 1))) "Yes!")
+           (p (strong "Will You be Attending?" (sup (@ (class "required")) "*")))
+           (label (input (@ ,@(get-going-attrs 1))) "Yes!")
            (br)
-           (label (input (@ ,@(get-attrs "going" 0))) "No :(")
-           (p (strong "Meal Choice:"))
-           (label (input (@ ,@(get-attrs "meal-choice" "chicken"))) "Chicken")
+           (label (input (@ ,@(get-going-attrs 0))) "No :(")
            (br)
-           (label (input (@ ,@(get-attrs "meal-choice" "beef"))) "Beef")
-           (br)
-           (label (input (@ ,@(get-attrs "meal-choice" "vegetarian"))) "Vegetarian")))))
+           (label (@ (class "meal-choice"))
+                  (strong "Meal Choice:")
+                  (select (@ ,(input-name "meal-choice"))
+                          (option (@ ,@(get-meal-attrs "")) "-- Please Select if Attending --")
+                          (option (@ ,@(get-meal-attrs "chicken")) "Chicken")
+                          (option (@ ,@(get-meal-attrs "beef")) "Beef")
+                          (option (@ ,@(get-meal-attrs "vegetarian")) "Vegetarian")
+                          (option (@ ,@(get-meal-attrs "vegan")) "Vegan")))))))
 
 (define (route-get-rsvp c)
   (call/cc
@@ -98,6 +97,7 @@
       (with-exception-handler
         (lambda (exn)
           (print-error-message exn)
+          ;; TODO: only print stack trace if NOT a sqlite3 no-data exeption!
           (print-call-chain)
           (send-sxml
             (template-page

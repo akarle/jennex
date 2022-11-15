@@ -106,3 +106,13 @@ div.guest fieldset legend {
 div.guest fieldset {
   margin-bottom: 16px;
 }
+
+label.meal-choice {
+  display: block;
+  margin-top: 20px;
+  margin-bottom: 16px;
+}
+
+sup.required {
+  color: red;
+}
