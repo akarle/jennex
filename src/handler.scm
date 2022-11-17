@@ -8,7 +8,7 @@
   (chicken string)
   (chicken condition))
 
-(load "db.scm")
+(include "db.scm")
 
 (define email '(a (@ (href "mailto:rsvp@jennex.org")) "rsvp@jennex.org"))
 

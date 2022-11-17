@@ -1,3 +1,5 @@
 *.html
 !footer.html
 !header.html
+rsvp
+rsvp.sqlite3

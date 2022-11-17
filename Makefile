@@ -1,7 +1,8 @@
 HTML != for f in *.tmpl; do echo $$(basename $$f tmpl)html; done
+SCHEME != find . -name '*.scm'
 
 .PHONY: build
-build: $(HTML)
+build: $(HTML) rsvp
 
 .PHONY: clean
 clean:
@@ -13,3 +14,5 @@ clean:
 
 $(HTML): header.html footer.html Makefile
 
+rsvp: $(SCHEME)
+	(cd src; chicken-csc prod.scm -o ../$@)
