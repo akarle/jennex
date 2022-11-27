@@ -2,7 +2,12 @@ HTML != for f in *.tmpl; do echo $$(basename $$f tmpl)html; done
 SCHEME != find . -name '*.scm'
 
 .PHONY: build
-build: $(HTML) rsvp
+build: build-html rsvp
+
+
+# Standalone target for Netlify, which doesn't have chicken-csc
+.PHONY: build-html
+build-html: $(HTML)
 
 .PHONY: clean
 clean:
