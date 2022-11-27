@@ -15,7 +15,7 @@ html {
     background-color: #fffff5;
 }
 
-.index-joinus {   
+.index-joinus {
     text-align: center;
 }
 
@@ -138,4 +138,16 @@ input.find-invite {
 
 form.find-invite {
   text-align: center;
+}
+
+table.hotels {
+  border-collapse: collapse;
+  width: 100%;
+  overflow: auto;
+}
+
+table.hotels td, table.hotels th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
 }
