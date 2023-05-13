@@ -15,6 +15,12 @@ html {
     background-color: #fffff5;
 }
 
+.home-photo {
+    display: block;
+    margin: 0 auto;
+    width: 50%;
+}
+
 .index-joinus {
     text-align: center;
 }
